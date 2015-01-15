@@ -1,0 +1,11 @@
+    <widget id="com.aeroponics.test" version="0.0.2">
+        <name>AeroponicsTest</name>
+        <description>
+            A sample aeroponics controller.
+        </description>
+        <author email="dev@callback.apache.org" href="http://aeroponicsdiy.com">
+            Apache Cordova Team
+        </author>
+        <content src="index.html" />
+        <access origin="*" />
+    </widget>

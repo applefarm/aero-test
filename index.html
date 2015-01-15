@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Aeroponics Spark</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via  -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+
+    <script type="text/javascript" src="http://codeorigin.jquery.com/jquery-2.0.3.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<script type="text/javascript" charset="utf-8" src="js/cordova.js"></script>
+	<script src="js/Chart.min.js"></script>
+
+    <script>
+      $(document).ready(function() {
+        var statusTimer = null;
+        var timer1, timer2, timer3, timer4;
+        var baseURL = "https://api.spark.io/v1/devices/";
+        
+        //--------------------------------------------------------------
+        // START - EDITABLE USER DATA
+        //
+        var accessToken = "9a0418d3c02b02cdb5be03d89072bff8038b0a5d";
+        var coreID = "54ff71066672524853290167";
+        // App Heading
+        // var appHeading = "Aeroponics Controller";
+        // Function 1
+        var funcKey1 = "temperatureR";
+        var args1 = "D0";
+        var label1 = "Temperature"; // button label 1 (set to "" to disable)
+        // Function 2
+        var funcKey2 = "aeroConfig";
+        var args2 = "MIST1ONTIM,";
+        var label2 = "Mist On Time"; // button label 2 (set to "" to disable)
+        // Function 3
+        var funcKey3 = "aeroConfig";
+        var args3 = "MIST1OFFTM,";
+        var label3 = "Mist Off Time"; // button label 3 (set to "" to disable)
+        // Function 4
+        var funcKey4 = "aeroConfig";
+        var args4 = "STARTSTOP";
+        var label4 = "Start/Stop"; // button label 4 (set to "" to disable)
+        // Function 5
+        var funcKey5 = "aeroConfig";
+        var args5 = "TEMP5MINRD,1";
+        var label5 = "Get Data"; // button label 4 (set to "" to disable)
+        //Button Labels
+        var btnLabel6 = "Temperature</br>";
+        // Variable 1
+        var varKey1 = "temperatureR";
+        var var1onLabel = "Running!";
+        var var1offLabel = "Stopped.";
+        var var1onState = null; // Set to null to allow raw value to be displayed.
+        var var1offState = null; // Set to null to allow raw value to be displayed.
+        var refresh1 = 15000; // variable 1 refresh rate in milliseconds (set to 0 to disable)
+        // Variable 2
+        var varKey2 = "aero";
+        var var2onLabel = "Open!";
+        var var2offLabel = "Closed.";
+        var var2onState = null; // Set to null to allow raw value to be displayed.
+        var var2offState = null; // Set to null to allow raw value to be displayed.
+        var refresh2 = 0; // variable 2 refresh rate in milliseconds (set to 0 to disable)
+        // Variable 3
+        var varKey3 = "";
+        var var3onLabel = "";
+        var var3offLabel = "";
+        var var3onState = null; // Set to null to allow raw value to be displayed.
+        var var3offState = null; // Set to null to allow raw value to be displayed.
+        var refresh3 = 0; // variable 3 refresh rate in milliseconds (set to 0 to disable)
+        // Variable 4
+        var varKey4 = "x";
+        var var4onLabel = "x";
+        var var4offLabel = "x";
+        var var4onState = null; // Set to null to allow raw value to be displayed.
+        var var4offState = null; // Set to null to allow raw value to be displayed.
+        var refresh4 = 0; // variable 4 refresh rate in milliseconds (set to 0 to disable)
+        // Variable 5
+        var varKey5 = "TEMPER5MIN";
+        var refresh5 = 10000; // variable 5 refresh rate in milliseconds (set to 0 to disable)
+        // Variable 6
+        var varKey6 = "CURRENTDATA";
+        var refresh6 = 60000; // variable 6 refresh rate in milliseconds (set to 0 to disable)
+        // Variable 7
+        var varKey7 = "TEMPER1HR";
+        var refresh7 = 60000; // variable 7 refresh rate in milliseconds (set to 0 to disable)
+        //
+        // END - EDITABLE USER DATA
+        //--------------------------------------------------------------
+
+        // Update app heading
+        // $("#app-heading").html(appHeading);
+
+        // Override button styles
+        // $(".btn-lg").css({"width":"45%"});
+
+        // Update button labels to code definitions
+        // or hide them if not defined.
+        (label1) ? $("#button-1").html(label1) : $("#button-1").hide();
+        (label2) ? $("#button-2").html(label2) : $("#button-2").hide();
+        (label3) ? $("#button-3").html(label3) : $("#button-3").hide();
+        (label4) ? $("#button-4").html(label4) : $("#button-4").hide();
+
+        // Override text input styles
+        $(".form-control").css({"display":"inline","width":"35%"});
+
+        // Hide variable text fields if not in use.
+        if(refresh1 === 0) $("#var-val-1").hide();
+        // if(refresh2 === 0) $("#var-val-2").hide();
+        // if(refresh3 === 0) $("#var-val-3").hide();
+        // if(refresh4 === 0) $("#var-val-4").hide();
+        $("#var-val-5").val('waiting...');
+
+		//Chart
+		var chartT5mindata = {
+    		labels: ["0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "10000", "11111"],
+    		datasets: [
+        	{
+           	 	label: "My First dataset",
+           	 	fillColor: "rgba(220,220,220,0.2)",
+           	 	strokeColor: "rgba(220,220,220,1)",
+           	 	pointColor: "rgba(220,220,220,1)",
+            	pointStrokeColor: "#fff",
+            	pointHighlightFill: "#fff",
+            	pointHighlightStroke: "rgba(220,220,220,1)",
+            	data: [65, 59, 80, 81, 56, 55, 40, 55, 66, 77, 88, 99]
+        	},
+        	{
+            	label: "My Second dataset",
+            	fillColor: "rgba(151,187,205,0.2)",
+            	strokeColor: "rgba(151,187,205,1)",
+            	pointColor: "rgba(151,187,205,1)",
+            	pointStrokeColor: "#fff",
+            	pointHighlightFill: "#fff",
+            	pointHighlightStroke: "rgba(151,187,205,1)",
+            	data: [28, 48, 40, 19, 86, 27, 90]
+        	}
+    	]};
+    	var chartT1hrdata = {
+    		labels: ["0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "10000", "11111","0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "10000", "11111"],
+    		datasets: [
+        	{
+           	 	label: "My First dataset",
+           	 	fillColor: "rgba(220,220,220,0.2)",
+           	 	strokeColor: "rgba(220,220,220,1)",
+           	 	pointColor: "rgba(220,220,220,1)",
+            	pointStrokeColor: "#fff",
+            	pointHighlightFill: "#fff",
+            	pointHighlightStroke: "rgba(220,220,220,1)",
+            	data: [65, 59, 80, 81, 56, 55, 40, 55, 66, 77, 88, 99, 65, 59, 80, 81, 56, 55, 40, 55, 66, 77, 88, 99]
+        	},
+        	{
+            	label: "My Second dataset",
+            	fillColor: "rgba(151,187,205,0.2)",
+            	strokeColor: "rgba(151,187,205,1)",
+            	pointColor: "rgba(151,187,205,1)",
+            	pointStrokeColor: "#fff",
+            	pointHighlightFill: "#fff",
+            	pointHighlightStroke: "rgba(151,187,205,1)",
+            	data: [28, 48, 40, 19, 86, 27, 90]
+        	}
+    	]};
+//Chart data end
+		var ctx = $("#myChart").get(0).getContext("2d");
+		var myLineChart = new Chart(ctx).Line(chartT5mindata, {
+    			scaleOverride: true,
+    			scaleSteps: 11,
+    			scaleStepWidth: 10,
+    			scaleStartValue: 0,
+    			responsive: true,
+    			showTooltips: false
+				});
+		var myBarChart = new Chart(ctx).Bar(chartT5mindata,  {
+    			scaleOverride: true,
+    			scaleSteps: 11,
+    			scaleStepWidth: 10,
+    			scaleStartValue: 0,
+    			responsive: true,
+    			showTooltips: false
+				});
+		var ctx24 = $("#temperChart24").get(0).getContext("2d");
+		var myLineChart24 = new Chart(ctx24).Line(chartT1hrdata, {
+    			scaleOverride: true,
+    			scaleSteps: 11,
+    			scaleStepWidth: 10,
+    			scaleStartValue: 0,
+    			responsive: true,
+    			showTooltips: false
+				});
+		//end chart section
+
+        // Auto-refresh
+        // Turn on/off the variable refresh if refresh rates are defined
+        if(refresh1) {
+          $("#get-var-1").attr("disabled", "disabled");
+          timer1 = setInterval(function () {
+            // getVariable1();
+			getFunc1();
+          }, refresh1);
+        }
+        if(refresh2) {
+          $("#get-var-2").attr("disabled", "disabled");
+          timer2 = setInterval(function () {
+            getVariable2();
+          }, refresh2);
+        }
+        if(refresh3) {
+          $("#get-var-3").attr("disabled", "disabled");
+          timer3 = setInterval(function () {
+            getVariable3();
+          }, refresh3);
+        }
+        if(refresh4) {
+          $("#get-var-4").attr("disabled", "disabled");
+          timer4 = setInterval(function () {
+            getVariable4();
+          }, refresh4);
+        } 
+        if(refresh5) {
+          $("#get-var-5").attr("disabled", "disabled");
+          timer5 = setInterval(function () {
+            getVariable5();
+          }, refresh5);
+        }
+        if(refresh6) {
+          timer6 = setInterval(function () {
+            getVarCstat();
+          }, refresh6);
+        }     
+        if(refresh7) {
+          timer7 = setInterval(function () {
+            getVariable7();
+          }, refresh7);
+        }   
+        ////
+        // Alerts
+        ////
+        $("#info-alert").alert();
+        $("#info-alert").affix();
+
+        ////
+        // Methods
+        ////
+        function onMethodSuccess() {
+          alert = $("#info-alert");
+          alert.text("Success!").removeClass("alert-danger").addClass("alert-success");
+          if(statusTimer != null) {
+            clearTimeout(statusTimer);
+            alert.hide();
+            setTimeout(function() {
+              alert.show();
+              statusTimer = setTimeout(function() {
+                statusTimer = null;
+                alert.hide();
+              }, 1750);
+            }, 250);
+          }
+          else {
+            alert.show();
+            statusTimer = setTimeout(function() {
+              statusTimer = null;
+              alert.hide();
+            }, 2000);
+          }
+        }
+
+        function onMethodFailure(data) {
+          alert = $("#info-alert");
+          alert.text((data)?"Error! "+data:"Error!").removeClass("alert-success").addClass("alert-danger");
+          if(statusTimer != null) {
+            clearTimeout(statusTimer);
+            alert.hide();
+            setTimeout(function() {
+              alert.show();
+              statusTimer = setTimeout(function() {
+                statusTimer = null;
+                alert.hide();
+              }, 1750);
+            }, 250);
+          }
+          else {
+            alert.show();
+            statusTimer = setTimeout(function() {
+              statusTimer = null;
+              alert.hide();
+            }, 2000);
+          }
+        }
+
+		function doClick(method, data) {
+         getfuncValue(method, data, function (res) {
+            //$("#var-val-2").val(res);
+			alert('val = ' + res);
+        	});
+		}
+		
+		function doClickStartStop(method, data) {
+         getfuncValue(method, data, function (res) {
+            //$("#var-val-2").val(res);
+            if (res == 1) $("#var-val-4").val('RUNNING');
+            else if (res == 2) $("#var-val-4").val('STOPPED');
+  			alert('val = ' + res);
+        	});
+		}
+
+
+        // The base level run method command
+        function doMethod(method, data) {
+          var url = baseURL + coreID + "/" + method;
+          $.ajax({
+            type: "POST",
+            url: url,
+            data: {
+              access_token: accessToken,
+              args: data
+            },
+            dataType: "json"
+          }).success(function(obj) {
+            console.log(obj);
+            (obj.return_value && obj.return_value == 200) ? onMethodSuccess() : onMethodFailure((obj.error)?obj.error:"");
+          }).fail(function(obj) {
+            onMethodFailure();
+          });
+        }
+
+		// On Click Events
+        $("#button-1").on("click", function () {
+          doMethod(funcKey1, args1);
+        });
+        $("#button-2").on("click", function () {
+          doClick(funcKey2, args2 + $('#var-val-2').val());
+        });
+        
+        $("#button-3").on("click", function () {
+          doClick(funcKey3, args3 + $('#var-val-3').val());
+        });
+        
+        $("#button-4").on("click", function () {
+          doClickStartStop(funcKey4, args4);
+        });
+
+        $("#button-5").on("click", function () {
+          doClick(funcKey5, args5);
+        });
+
+        ////
+        // Variables
+        ////
+        function getVariable(variable, callback) {
+          var url = baseURL + coreID + "/" + variable + "?access_token=" + accessToken;
+          $.ajax({
+            url: url,
+            dataType: "json"
+          }).success(function(obj) {
+            console.log(obj);
+            (obj.coreInfo.deviceID && obj.coreInfo.deviceID == coreID) ? onMethodSuccess() : onMethodFailure((obj.error)?obj.error:"");
+            callback(obj.result);
+          }).fail(function(obj) {
+            onMethodFailure();
+          });
+        }
+
+		        // The base level run method command
+        function getfuncValue(method, data, callback) {
+          var url = baseURL + coreID + "/" + method;
+          $.ajax({
+            type: "POST",
+            url: url,
+            data: {
+              access_token: accessToken,
+              args: data
+            },
+            dataType: "json"
+          }).success(function(obj) {
+            console.log(obj);
+			//alert('val = ' + obj.return_value);
+           	callback(obj.return_value);
+		  }).fail(function(obj) {
+            onMethodFailure();
+          });
+        }
+		
+		// Get temperture variable methods
+        function getFunc1() {
+          getfuncValue(funcKey1, args1, function (res) {
+            $("#var-val-1").val(res);  // assign button id
+            $("#var-val-1").text(res); // assign span id
+
+			//alert('val = ' + res);
+          });
+        }
+		
+        // Get variable methods
+        function getVariable1() {
+          getVariable(varKey1, function (res) {
+            if(res === var1onState)
+              $("#var-val-1").val(var1onLabel);
+            else if(res === var1offState)
+              $("#var-val-1").val(var1offLabel);
+            else
+              $("#var-val-1").val(res);
+          });
+        }
+        function getVariable2() {
+          getVariable(varKey2, function (res) {
+            if(res === var2onState)
+              $("#var-val-2").val(var2onLabel);
+            else if(res === var2offState)
+              $("#var-val-2").val(var2offLabel);
+            else
+              $("#var-val-2").val(res);
+          });
+        }
+        function getVariable3() {
+          getVariable(varKey3, function (res) {
+            if(res === var3onState)
+              $("#var-val-3").val(var3onLabel);
+            else if(res === var3offState)
+              $("#var-val-3").val(var3offLabel);
+            else
+              $("#var-val-3").val(res);
+          });
+        }
+        function getVariable4() {
+          getVariable(varKey4, function (res) {
+            if(res === var4onState)
+              $("#var-val-4").val(var4onLabel);
+            else if(res === var4offState)
+              $("#var-val-4").val(var4offLabel);
+            else
+              $("#var-val-4").val(res);
+          });
+        }
+
+        function getVariable5() {
+          getVariable(varKey5, function (res) {
+              $("#var-val-5").val(res);
+              $("#button-6").html(btnLabel6+res);
+              var yy = JSON.parse(res);
+			  // myLineChart.datasets[0].points[2].value = yy.Data[1];
+			  // chartT5mindata.labels[2] =  yy.Labels[1];
+			  for(var i = 0, xx = yy.Data.length; i < xx && i < 12; ++i) // **change 2 to read more
+   				myLineChart.datasets[0].points[i].value = yy.Data[i];
+			  for(var i = 0, xx = yy.Labels.length; i < xx && i < 12; ++i) // **change 2 to read more
+   				chartT5mindata.labels[i] = yy.Labels[i];
+			  myLineChart.update();  
+          });
+        }
+        
+        function getVariable7() {
+          getVariable(varKey7, function (res) {
+              var yy = JSON.parse(res);
+			  for(var i = 0, xx = yy.Data.length; i < xx && i < 24; ++i) // **read no more than 24 values
+   				myLineChart24.datasets[0].points[i].value = yy.Data[i];
+			  for(var i = 0, xx = yy.Labels.length; i < xx && i < 24; ++i) // **read no more than 24 values
+   				chartT1hrdata.labels[i] = yy.Labels[i];
+			  myLineChart24.update();  
+          });
+        }
+        
+        // get current data and stats
+        function getVarCstat() {
+          getVariable(varKey6, function (res) {
+              var retObj = JSON.parse(res);
+              $("#var-cDate").text(retObj.Day);
+              $("#var-cTime").text(retObj.Time);
+              $("#var-cStartg").text(retObj.StartG);
+              $("#var-cDaysg").text(retObj.DaysG);
+              $("#var-cPlantn").text(retObj.PlantN);
+              $("#var-cHumid1").text(retObj.Humid1);
+              $("#var-cLight1").text(retObj.Light1);
+              $("#var-cPres1").text(retObj.Pres1);
+              $("#var-cTemp2").text(retObj.Temper2);
+              $("#var-cHumid2").text(retObj.Humid2);
+          });
+        }
+
+      });
+    </script> 
+
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Aeroponics Dashboard</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="panel panel-success">
+        <div class="panel-heading">
+          <h4 class="panel-title" id="app-heading"></h4>
+        </div>
+        <div id="buttons" class="panel">
+          <div class="panel-body">
+            <button type="button" class="btn btn-default btn-lg" style="width:47%;border: #ffffff" disabled="disabled" id="button-7"><img src="images/plant-spray.gif"><h6>&nbsp;</h6></button>
+            <button type="button" class="btn btn-default btn-lg" style="width:47%;border: #ffffff" disabled="disabled" id="button-8"><h3><span id="var-cPlantn">Lettuce</span></h3>Growth <span id="var-cDaysg">361</span> days<br/>Seed <span id="var-cStartg">12/23/14</span><br/>Last <span id="var-cDate">1/2/15</span> <span id="var-cTime">12:10</span></button><br/>
+
+            <button type="button" class="btn btn-danger btn-lg" style="width:47%" id="button-9">Temperature<br><h2><span id="var-val-1">NA</span></h2></button>
+            <button type="button" class="btn btn-primary btn-lg" style="width:47%" id="button-10">Humidity<br><h2><span id="var-cHumid1">NA</span></h2></button><br/><br/>
+
+            <button type="button" class="btn btn-warning btn-lg" style="width:47%" id="button-11">Light<br><h2><span id="var-cLight1">NA</span></h2></button>
+            <button type="button" class="btn btn-success btn-lg" style="width:47%" id="button-12">Pressure<br><h2><span id="var-cPres1">NA</span></h2></button><br/><br/>
+
+            <button type="button" class="btn btn-danger btn-lg" style="width:47%" id="button-13">Temperature<br><h2><span id="var-cTemp2">NA</span></h2></button>
+            <button type="button" class="btn btn-primary btn-lg" style="width:47%" id="button-14">Humidity<br><h2><span id="var-cHumid2">NA</span></h2></button>
+            
+
+          </div>
+        </div>
+		<canvas id="myChart" width="400" height="250"></canvas>
+		<canvas id="temperChart24" width="400" height="250"></canvas>
+
+      </div>
+      <div class="alert fade in" id="info-alert" hidden data-spy="affix"></div>
+    </div>
+  
+    
+
+  </body>
+</html>
